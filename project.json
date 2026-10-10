@@ -1,0 +1,233 @@
+{
+  "id": 4,
+  "slug": "lead-intake-automation",
+  "repo": "ai-workflow-lead-intake",
+  "title": "AI workflow automation: lead intake to CRM",
+  "tagline": "An n8n workflow and a Python AI service that read inbound sales emails, extract and score leads, write them to a CRM table and send doubtful ones to a human review queue.",
+  "category": "Automation",
+  "status": "building",
+  "started": "2026-10-10",
+  "finished": "",
+  "pitch": "I built an automation that reads the emails arriving in a sales inbox and turns them into CRM records. An n8n workflow receives each email and calls a small Python service, which decides whether the email is a sales lead, pulls out the contact, company, product interest, budget and timeline, and gives the lead a score with the reasons written out. Clear leads go straight into the CRM, and anything the system is not sure about waits in a review queue for a person. I measured how often it is right on a labelled set of emails, so I can tell you what it gets wrong and not only what it gets right.",
+  "problem": "A sales inbox receives quote requests mixed with support questions, supplier pitches, job applications and automatic replies. Someone reads every email, decides what it is and retypes the contact details into the CRM. Good leads wait hours for a first reply, details are mistyped, and some leads are never entered at all.",
+  "solution": "An n8n workflow receives each inbound email on a webhook and sends it to a Python service. The service asks a language model, in one call, for the category of the email and the lead fields, in a fixed schema. Code then checks that every extracted value really appears in the email, computes a score from written rules, and decides the route: straight to the CRM table, to a human review queue, or to the archive. The workflow writes the result and notifies sales about hot leads. The same service also runs without n8n, on an offline rule-based provider, so anyone can try it with no key and no account.",
+  "features": [
+    "Classifies each inbound email as a sales lead, a support request, a supplier pitch, a job application or other",
+    "Extracts contact name, company, email, phone, job title, country, product interest, budget and timeline into a typed schema",
+    "Checks that every extracted value appears in the email, and removes and flags any that does not",
+    "Scores each lead from 0 to 100 with written rules and lists the reasons, so a salesperson can see why",
+    "Routes clear leads to a CRM table and doubtful ones to a human review queue with the reason",
+    "Review page where a person corrects the fields, then approves or rejects",
+    "Recognises a repeat sender and adds the email to the existing lead instead of creating a duplicate",
+    "An n8n workflow file that imports in one step, and a one-call endpoint that does the same job without n8n",
+    "Runs offline with no API key, and with any OpenAI-compatible model when one is configured"
+  ],
+  "stack": [],
+  "keywords": [],
+  "topics": [],
+  "workflow": [
+    {
+      "step": "Email in",
+      "detail": "An email (sender, subject, body, message id) reaches the n8n webhook. In production an IMAP or Gmail trigger would feed the same workflow."
+    },
+    {
+      "step": "Analyse",
+      "detail": "n8n posts the email to the Python service. One model call returns the category and the lead fields in a fixed schema."
+    },
+    {
+      "step": "Ground",
+      "detail": "Code checks that each extracted value appears in the email text. A value that does not is removed and the email is flagged."
+    },
+    {
+      "step": "Score",
+      "detail": "Written rules turn the fields into a score from 0 to 100 and a tier (hot, warm or cold), with the reasons listed."
+    },
+    {
+      "step": "Route",
+      "detail": "A lead with all required fields and no flags goes to the CRM. A lead with a missing field or a flag goes to the review queue. Everything else is archived with its category."
+    },
+    {
+      "step": "Write and notify",
+      "detail": "n8n calls the CRM endpoint or the review endpoint, and sends a notification for hot leads. A repeat sender is added to the existing lead."
+    },
+    {
+      "step": "Human review",
+      "detail": "A person opens the review page, corrects the fields if needed, and approves (the lead is written to the CRM) or rejects."
+    }
+  ],
+  "phases": [
+    {
+      "name": "Foundation",
+      "goal": "A repository that runs, with a labelled set of emails and a database to write to.",
+      "status": "doing",
+      "outcome": "",
+      "steps": [
+        {
+          "text": "Create the repository skeleton, virtual environment and pinned requirements",
+          "done": false
+        },
+        {
+          "text": "Write the settings module and the typed schema for an email and a lead",
+          "done": false
+        },
+        {
+          "text": "Write a seeded generator for labelled emails in five categories, in a plain style and a harder style",
+          "done": false
+        },
+        {
+          "text": "Create the SQLite store: messages, CRM leads, lead activity, review queue, notifications",
+          "done": false
+        }
+      ]
+    },
+    {
+      "name": "Analysis",
+      "goal": "One call that turns an email into a category and lead fields, on the offline provider and on a real model.",
+      "status": "todo",
+      "outcome": "",
+      "steps": [
+        {
+          "text": "Define the provider interface and the prompt",
+          "done": false
+        },
+        {
+          "text": "Write the offline rule-based provider",
+          "done": false
+        },
+        {
+          "text": "Write the OpenAI-compatible provider with schema-constrained output",
+          "done": false
+        },
+        {
+          "text": "Add the grounding check that removes values not found in the email",
+          "done": false
+        },
+        {
+          "text": "Run both providers on sample emails",
+          "done": false
+        }
+      ]
+    },
+    {
+      "name": "Scoring and routing",
+      "goal": "Every analysed email ends in the CRM, the review queue or the archive, for a stated reason.",
+      "status": "todo",
+      "outcome": "",
+      "steps": [
+        {
+          "text": "Write the scoring rules with reasons and tiers",
+          "done": false
+        },
+        {
+          "text": "Write the routing decision",
+          "done": false
+        },
+        {
+          "text": "Handle repeated messages and repeat senders without duplicates",
+          "done": false
+        },
+        {
+          "text": "Add review actions: approve with corrections, reject",
+          "done": false
+        },
+        {
+          "text": "Run the pipeline end to end on the data set",
+          "done": false
+        }
+      ]
+    },
+    {
+      "name": "Evaluation",
+      "goal": "Measured accuracy of classification, extraction and routing.",
+      "status": "todo",
+      "outcome": "",
+      "steps": [
+        {
+          "text": "Write the evaluation script: category accuracy, field accuracy, routing outcomes",
+          "done": false
+        },
+        {
+          "text": "Measure the offline provider on the plain and the harder emails",
+          "done": false
+        },
+        {
+          "text": "Measure a real language model on a sample",
+          "done": false
+        },
+        {
+          "text": "Save the reports in the repository",
+          "done": false
+        }
+      ]
+    },
+    {
+      "name": "Interface and n8n workflow",
+      "goal": "The API, a review page and an n8n workflow that runs the whole flow.",
+      "status": "todo",
+      "outcome": "",
+      "steps": [
+        {
+          "text": "Build the API endpoints",
+          "done": false
+        },
+        {
+          "text": "Build the review and CRM page",
+          "done": false
+        },
+        {
+          "text": "Write the n8n workflow and a compose file that starts n8n with it",
+          "done": false
+        },
+        {
+          "text": "Import the workflow into a real n8n and send emails through its webhook",
+          "done": false
+        },
+        {
+          "text": "Add the command line: serve, process, demo",
+          "done": false
+        }
+      ]
+    },
+    {
+      "name": "Verification and documentation",
+      "goal": "Tests pass, the numbers are recorded, and a client can understand the repository.",
+      "status": "todo",
+      "outcome": "",
+      "steps": [
+        {
+          "text": "Write the tests and run them with no key",
+          "done": false
+        },
+        {
+          "text": "Run the project from a clean shell the way the README says",
+          "done": false
+        },
+        {
+          "text": "Do the live model check or record why it is pending",
+          "done": false
+        },
+        {
+          "text": "Write the README with a diagram and real output",
+          "done": false
+        },
+        {
+          "text": "Complete the dashboard entry and check for secrets",
+          "done": false
+        }
+      ]
+    }
+  ],
+  "decisions": [],
+  "results": [],
+  "client_qa": [],
+  "concepts": [],
+  "limits": [],
+  "run": [],
+  "files": [],
+  "verification": {
+    "tests": "",
+    "live_llm": "pending",
+    "cost_usd": 0,
+    "notes": ""
+  }
+}
