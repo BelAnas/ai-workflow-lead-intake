@@ -1,0 +1,42 @@
+# Starts the Python service and n8n with the workflow already imported and active.
+#
+#   docker compose up --build
+#   n8n editor:        http://localhost:5678   (webhook: POST http://localhost:5678/webhook/lead-intake)
+#   review page / API: http://localhost:8024
+#
+# If a port is taken: N8N_PORT=5690 SERVICE_PORT=8025 docker compose up --build
+services:
+  lead-service:
+    build: .
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      API_TOKEN: ${API_TOKEN:-}
+    ports:
+      - "${SERVICE_PORT:-8024}:8024"
+    volumes:
+      - lead-data:/data
+
+  n8n:
+    image: n8nio/n8n:2.23.2
+    depends_on:
+      - lead-service
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+    volumes:
+      - ./n8n:/workflows:ro
+      - n8n-data:/home/node/.n8n
+    # Import the workflow from the repository and switch it on before n8n starts, so the
+    # webhook answers without anyone opening the editor.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - n8n import:workflow --input=/workflows/lead-intake.workflow.json && n8n publish:workflow --id=leadIntakeToCrm01 && exec n8n start
+
+volumes:
+  lead-data:
+  n8n-data:

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lead intake</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1c2430; --dim:#667085; --line:#e3e6eb; --accent:#1f6feb; --hot:#c2410c; --warm:#a16207; --cold:#475467; --ok:#15803d; --bad:#b42318; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#12161c; --card:#1a2029; --ink:#e6e9ee; --dim:#98a2b3; --line:#2b3340; --accent:#6ea8fe; --hot:#fb923c; --warm:#facc15; --cold:#98a2b3; --ok:#4ade80; --bad:#f97066; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:16px 24px 0; }
+  h1 { font-size:18px; margin:0 0 2px; }
+  .sub { color:var(--dim); }
+  .stats { display:flex; gap:12px; flex-wrap:wrap; margin:14px 0; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:8px 14px; min-width:110px; }
+  .stat b { display:block; font-size:20px; }
+  nav { display:flex; gap:4px; border-bottom:1px solid var(--line); padding:0 24px; }
+  nav button { background:none; border:0; border-bottom:2px solid transparent; padding:10px 14px; color:var(--dim); cursor:pointer; font:inherit; }
+  nav button.on { color:var(--ink); border-color:var(--accent); font-weight:600; }
+  main { padding:18px 24px 40px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:14px; }
+  .two { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  @media (max-width: 800px) { .two { grid-template-columns: 1fr; } }
+  pre { white-space:pre-wrap; word-break:break-word; background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:10px; margin:6px 0 0; font:12.5px/1.45 ui-monospace, monospace; max-height:320px; overflow:auto; }
+  label { display:block; color:var(--dim); font-size:12px; margin-top:8px; }
+  input, select, textarea { width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--ink); font:inherit; }
+  textarea { min-height:130px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; }
+  .btn { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:6px; padding:7px 14px; cursor:pointer; font:inherit; margin:12px 8px 0 0; }
+  .btn.go { background:var(--accent); border-color:var(--accent); color:#fff; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--dim); font-weight:500; font-size:12px; }
+  .wrap { overflow-x:auto; }
+  .tag { display:inline-block; border-radius:10px; padding:0 8px; font-size:12px; border:1px solid currentColor; }
+  .hot { color:var(--hot); } .warm { color:var(--warm); } .cold { color:var(--cold); }
+  .crm { color:var(--ok); } .review { color:var(--warm); } .archive { color:var(--dim); }
+  .reason { color:var(--warm); font-weight:600; }
+  .small { color:var(--dim); font-size:12px; }
+  .empty { color:var(--dim); padding:30px; text-align:center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Lead intake</h1>
+  <div class="sub">Inbound sales email → category, lead fields, score → CRM, human review or archive. Demo data, no real people.</div>
+  <div class="stats" id="stats"></div>
+</header>
+<nav>
+  <button data-tab="review" class="on">Review queue</button>
+  <button data-tab="leads">CRM leads</button>
+  <button data-tab="messages">Inbox log</button>
+  <button data-tab="try">Try an email</button>
+</nav>
+<main id="main"></main>
+
+<script>
+// The optional API token is passed as ?token=... so the page can call a protected API.
+const token = new URLSearchParams(location.search).get('token');
+const PRODUCTS = ['pallet_racking', 'shelving', 'conveyors', 'mezzanine', 'packing_stations'];
+const TIMELINES = ['within_1_month', 'within_3_months', 'later', 'unknown'];
+const TEXT_FIELDS = ['contact_name', 'company', 'email', 'phone', 'job_title', 'country'];
+let tab = 'review';
+
+async function api(path, body) {
+  const headers = {'Content-Type': 'application/json'};
+  if (token) headers['X-API-Key'] = token;
+  const response = await fetch(path, {method: body ? 'POST' : 'GET', headers, body: body ? JSON.stringify(body) : undefined});
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.detail ? JSON.stringify(data.detail) : response.statusText);
+  return data;
+}
+// Everything shown comes from emails, so it is escaped before it goes into the page.
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const label = s => esc(String(s).replace(/_/g, ' '));
+
+async function stats() {
+  const s = await api('/stats');
+  const items = [['Emails', s.messages], ['CRM leads', s.leads], ['Hot leads', s.hot_leads], ['Waiting for review', s.review_pending], ['Archived', s.archived], ['Provider', s.provider]];
+  document.getElementById('stats').innerHTML = items.map(([k, v]) => `<div class="stat"><b>${esc(v)}</b>${k}</div>`).join('');
+}
+
+function leadForm(id, lead) {
+  const text = TEXT_FIELDS.map(f => `<div><label>${label(f)}</label><input data-f="${f}" value="${esc(lead[f])}"></div>`).join('');
+  const products = PRODUCTS.map(p => `<label style="display:inline-block;margin-right:10px;color:inherit"><input type="checkbox" style="width:auto" data-p="${p}" ${lead.product_interest.includes(p) ? 'checked' : ''}> ${label(p)}</label>`).join('');
+  const timelines = TIMELINES.map(t => `<option ${t === lead.timeline ? 'selected' : ''}>${t}</option>`).join('');
+  return `<div class="grid" id="form-${id}">${text}
+    <div><label>budget amount</label><input data-f="budget_amount" type="number" value="${esc(lead.budget_amount)}"></div>
+    <div><label>budget currency</label><input data-f="budget_currency" value="${esc(lead.budget_currency)}"></div>
+    <div><label>timeline</label><select data-f="timeline">${timelines}</select></div>
+    <div style="grid-column:1/-1"><label>product interest</label>${products}</div></div>`;
+}
+
+function readForm(id) {
+  const form = document.getElementById('form-' + id), lead = {};
+  form.querySelectorAll('[data-f]').forEach(el => { lead[el.dataset.f] = el.value.trim() === '' ? null : el.value.trim(); });
+  lead.budget_amount = lead.budget_amount === null ? null : Number(lead.budget_amount);
+  lead.timeline = lead.timeline || 'unknown';
+  lead.product_interest = [...form.querySelectorAll('[data-p]')].filter(el => el.checked).map(el => el.dataset.p);
+  return lead;
+}
+
+async function decide(id, action) {
+  try {
+    await api(`/review/${id}/${action}`, action === 'approve' ? {lead: readForm(id)} : {});
+    render();
+  } catch (error) { alert(error.message); }
+}
+
+const views = {
+  async review() {
+    const rows = await api('/review');
+    if (!rows.length) return '<div class="empty">Nothing is waiting for review.</div>';
+    return rows.map(r => {
+      const a = r.analysis;
+      // An email the system did not file as a lead has no extracted fields: start the form from the sender.
+      const lead = {...a.lead, email: a.lead.email || a.email.from_email, contact_name: a.lead.contact_name || a.email.from_name};
+      return `<div class="card"><div class="reason">${esc(r.reason)}</div>
+        <div class="small">filed by the system as: ${label(a.category)} · score ${a.score} · ${esc(a.notes.join(' · '))}</div>
+        <div class="two"><div><label>email</label><pre>${esc(`From: ${a.email.from_name} <${a.email.from_email}>\nSubject: ${a.email.subject}\n\n${a.email.body}`)}</pre></div>
+        <div>${leadForm(r.id, lead)}
+          <button class="btn go" onclick="decide(${r.id}, 'approve')">Approve as lead</button>
+          <button class="btn" onclick="decide(${r.id}, 'reject')">Not a lead</button></div></div></div>`;
+    }).join('');
+  },
+  async leads() {
+    const rows = await api('/leads');
+    if (!rows.length) return '<div class="empty">No leads yet. Run <code>python -m lead_intake.cli demo</code> or use "Try an email".</div>';
+    return `<div class="card wrap"><table><tr><th>Score</th><th>Contact</th><th>Company</th><th>Interest</th><th>Budget</th><th>Timeline</th><th>Emails</th><th>Source</th><th>Why this score</th></tr>` +
+      rows.map(l => `<tr><td><span class="tag ${l.tier}">${l.score} ${l.tier}</span></td>
+        <td>${esc(l.contact_name)}<div class="small">${esc(l.email)}<br>${esc(l.phone)} ${esc(l.job_title)}</div></td>
+        <td>${esc(l.company)}<div class="small">${esc(l.country)}</div></td><td>${l.product_interest.map(label).join(', ')}</td>
+        <td>${l.budget_amount ? esc(l.budget_amount.toLocaleString() + ' ' + (l.budget_currency || '')) : ''}</td><td>${label(l.timeline)}</td>
+        <td>${l.emails}</td><td>${esc(l.source)}</td><td class="small">${l.score_reasons.map(esc).join('<br>')}</td></tr>`).join('') + '</table></div>';
+  },
+  async messages() {
+    const rows = await api('/messages');
+    if (!rows.length) return '<div class="empty">No emails processed yet.</div>';
+    return `<div class="card wrap"><table><tr><th>#</th><th>From</th><th>Subject</th><th>Category</th><th>Route</th><th>Reason</th></tr>` +
+      rows.map(m => `<tr><td>${m.id}</td><td>${esc(m.from_name)}<div class="small">${esc(m.from_email)}</div></td><td>${esc(m.subject)}</td>
+        <td>${label(m.category)}</td><td><span class="tag ${m.route}">${m.route}</span></td><td class="small">${esc(m.route_reason)}</td></tr>`).join('') + '</table></div>';
+  },
+  async try() {
+    return `<div class="two"><div class="card">
+      <label>from name</label><input id="t-name" value="Dana Whitfield">
+      <label>from email</label><input id="t-email" value="dana.whitfield@northpoint-foods.example">
+      <label>subject</label><input id="t-subject" value="Quote for shelving">
+      <label>body</label><textarea id="t-body">Hello,
+
+We are Northpoint Foods and we need 60 bays of longspan shelving for a new picking area. Our budget is around €25,000 and we would like it installed as soon as possible. Could you send a quote?
+
+Best regards,
+Dana Whitfield
+Operations Director
+Northpoint Foods
++44 20 7946 0555</textarea>
+      <button class="btn go" onclick="send()">Process this email</button></div>
+      <div class="card"><label>result</label><pre id="t-out">The decision will appear here.</pre></div></div>`;
+  },
+};
+
+async function send() {
+  const v = id => document.getElementById(id).value;
+  try {
+    const out = await api('/intake', {from_name: v('t-name'), from_email: v('t-email'), subject: v('t-subject'), body: v('t-body')});
+    document.getElementById('t-out').textContent = JSON.stringify(out, null, 2);
+    stats();
+  } catch (error) { document.getElementById('t-out').textContent = error.message; }
+}
+
+async function render() {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  try {
+    document.getElementById('main').innerHTML = await views[tab]();
+    await stats();
+  } catch (error) { document.getElementById('main').innerHTML = `<div class="empty">${esc(error.message)}</div>`; }
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); });
+render();
+</script>
+</body>
+</html>

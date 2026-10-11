@@ -163,28 +163,28 @@
     {
       "name": "Interface and n8n workflow",
       "goal": "The API, a review page and an n8n workflow that runs the whole flow.",
-      "status": "todo",
-      "outcome": "",
+      "status": "done",
+      "outcome": "A FastAPI service with a one-call endpoint and separate analyse and write endpoints, a review page with the CRM table and inbox log, a command line, and an n8n workflow that was imported into n8n 2.23.2 with docker compose and processed 20 sample emails through its webhook with the same result as the direct path.",
       "steps": [
         {
           "text": "Build the API endpoints",
-          "done": false
+          "done": true
         },
         {
           "text": "Build the review and CRM page",
-          "done": false
+          "done": true
         },
         {
           "text": "Write the n8n workflow and a compose file that starts n8n with it",
-          "done": false
+          "done": true
         },
         {
           "text": "Import the workflow into a real n8n and send emails through its webhook",
-          "done": false
+          "done": true
         },
         {
           "text": "Add the command line: serve, process, demo",
-          "done": false
+          "done": true
         }
       ]
     },
