@@ -59,52 +59,52 @@
     {
       "name": "Foundation",
       "goal": "A repository that runs, with a labelled set of emails and a database to write to.",
-      "status": "doing",
-      "outcome": "",
+      "status": "done",
+      "outcome": "A git repository with pinned dependencies, a typed schema for emails and leads, a seeded generator that writes 160 labelled emails (100 in a plain style, 60 hard cases), and a SQLite store with tables for messages, CRM leads, lead activity, the review queue and notifications.",
       "steps": [
         {
           "text": "Create the repository skeleton, virtual environment and pinned requirements",
-          "done": false
+          "done": true
         },
         {
           "text": "Write the settings module and the typed schema for an email and a lead",
-          "done": false
+          "done": true
         },
         {
           "text": "Write a seeded generator for labelled emails in five categories, in a plain style and a harder style",
-          "done": false
+          "done": true
         },
         {
           "text": "Create the SQLite store: messages, CRM leads, lead activity, review queue, notifications",
-          "done": false
+          "done": true
         }
       ]
     },
     {
       "name": "Analysis",
       "goal": "One call that turns an email into a category and lead fields, on the offline provider and on a real model.",
-      "status": "todo",
-      "outcome": "",
+      "status": "done",
+      "outcome": "One model call returns the category and the lead fields in a fixed schema. It works on the offline rule-based provider and on any OpenAI-compatible model (checked on a local llama3.2). A grounding check removes any extracted value that is not written in the email and flags the email.",
       "steps": [
         {
           "text": "Define the provider interface and the prompt",
-          "done": false
+          "done": true
         },
         {
           "text": "Write the offline rule-based provider",
-          "done": false
+          "done": true
         },
         {
           "text": "Write the OpenAI-compatible provider with schema-constrained output",
-          "done": false
+          "done": true
         },
         {
           "text": "Add the grounding check that removes values not found in the email",
-          "done": false
+          "done": true
         },
         {
           "text": "Run both providers on sample emails",
-          "done": false
+          "done": true
         }
       ]
     },

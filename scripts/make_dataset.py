@@ -52,7 +52,7 @@ NEEDS = {
     "conveyors": ["a roller conveyor line of roughly {n} metres", "a powered conveyor between goods-in and packing, about {n} metres",
                   "conveyors to connect {n} packing lanes"],
     "mezzanine": ["a mezzanine floor of about {n} square metres", "a {n} square metre mezzanine above our packing area"],
-    "packing_stations": ["{n} packing stations for our dispatch area", "{n} packing benches with shelves and scale mounts"],
+    "packing_stations": ["{n} packing stations for our dispatch area", "{n} packing benches with scale mounts and label printers"],
 }
 QTY = {"pallet_racking": [120, 300, 450, 600, 900], "shelving": [20, 40, 60, 150], "conveyors": [12, 25, 40],
        "mezzanine": [80, 150, 220], "packing_stations": [4, 6, 10, 16]}
