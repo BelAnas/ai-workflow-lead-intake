@@ -111,28 +111,28 @@
     {
       "name": "Scoring and routing",
       "goal": "Every analysed email ends in the CRM, the review queue or the archive, for a stated reason.",
-      "status": "todo",
-      "outcome": "",
+      "status": "done",
+      "outcome": "Leads get a score from 0 to 100 with the reasons listed. Every email is routed to the CRM, the review queue or the archive with a stated reason. A message delivered twice is stored once, a repeat sender is added to the existing lead, and a reviewer can approve with corrections or reject.",
       "steps": [
         {
           "text": "Write the scoring rules with reasons and tiers",
-          "done": false
+          "done": true
         },
         {
           "text": "Write the routing decision",
-          "done": false
+          "done": true
         },
         {
           "text": "Handle repeated messages and repeat senders without duplicates",
-          "done": false
+          "done": true
         },
         {
           "text": "Add review actions: approve with corrections, reject",
-          "done": false
+          "done": true
         },
         {
           "text": "Run the pipeline end to end on the data set",
-          "done": false
+          "done": true
         }
       ]
     },
