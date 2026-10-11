@@ -139,7 +139,7 @@
     {
       "name": "Evaluation",
       "goal": "Measured accuracy of classification, extraction and routing.",
-      "status": "todo",
+      "status": "doing",
       "outcome": "",
       "steps": [
         {
