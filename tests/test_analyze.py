@@ -82,3 +82,17 @@ def test_non_leads_carry_no_score(settings, mock):
     email = EmailIn(from_email="a@acme.example", subject="Application for Sales Coordinator", body="My CV is attached.")
     a = analyze(email, mock, settings)
     assert (a.category, a.score, a.route) == ("job_application", 0, "archive")
+
+
+def test_values_from_a_quoted_older_message_do_not_count(settings):
+    """Found in the evaluation: a model took the country and phone from our own quoted newsletter."""
+    email = EmailIn(from_name="Ann Lee", from_email="ann@acme.example", subject="Re: Autumn offers",
+                    body="We need 40 bays of shelving at Acme Ltd. Can someone send prices?\n\nAnn Lee\n\n"
+                         "On Tue, 6 Oct 2026 at 09:00, Meridian <news@meridian-we.example> wrote:\n"
+                         "> Call our sales team on +44 20 7946 0000.\n> Manchester, United Kingdom")
+    provider = FakeProvider(contact_name="Ann Lee", company="Acme Ltd", country="United Kingdom", phone="+44 20 7946 0000",
+                            job_title="unknown", product_interest=["shelving"])
+    a = analyze(email, provider, settings)
+    assert a.lead.country is None and a.lead.phone is None and a.lead.job_title is None
+    assert a.flags == ["ungrounded:phone"] and a.route == "review"
+    assert not any("job_title" in note for note in a.notes)  # a placeholder is not reported as an invented value

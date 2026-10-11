@@ -7,7 +7,7 @@ from .config import OWN_DOMAIN, Settings
 from .llm import PRODUCT_WORDS, Provider
 from .schema import Analysis, EmailIn, LeadFields
 from .scoring import score_lead
-from .textutil import EMAIL_RE, amounts, digits, norm
+from .textutil import EMAIL_RE, amounts, digits, norm, unquoted
 
 # Wording that addresses the software instead of a person. It does not block anything by
 # itself; it adds a flag, and a flagged lead is never filed without a person looking.
@@ -15,6 +15,7 @@ INSTRUCTION_RE = re.compile(r"ignore (all |any )?(previous|prior|above) instruct
                             r"classify this (message|email) as|mark (it|this) as (a )?(hot|lead)", re.I)
 # Signs that a sender may want to buy. Used only to catch a lead the model filed elsewhere.
 BUYING_RE = re.compile(r"\b(quote|quotation|pricing|prices?|how much|devis|we need|interested in|what would (this|that) cost)\b", re.I)
+PLACEHOLDERS = {"unknown", "n/a", "na", "none", "null", "not provided", "not stated", "not specified", "-"}
 IDENTITY_FIELDS = ("contact_name", "company", "email", "phone")
 SOFT_FIELDS = ("job_title", "country")
 
@@ -26,19 +27,24 @@ def ground(lead: LeadFields, email: EmailIn) -> tuple[LeadFields, list[str], lis
     wrong contact in the CRM is worse than an empty one, so a value that cannot be found in
     the text is removed. For the fields that identify the person this also raises a flag.
     """
-    text, flags, notes = norm(email.text()), [], []
+    # Only what the sender wrote counts. A reply often quotes our own newsletter underneath, with
+    # our phone number and country in it, and those must not end up on the customer's record.
+    own_words = unquoted(email.body)
+    text, flags, notes = norm(f"{email.from_name} <{email.from_email}>\n{email.subject}\n{own_words}"), [], []
     values = lead.model_dump()
     for name in IDENTITY_FIELDS + SOFT_FIELDS:
         value = values[name]
+        if isinstance(value, str) and norm(value) in PLACEHOLDERS:
+            values[name] = value = None  # small models write "unknown" where the schema allows null
         if not value:
             continue
-        found = digits(value) in digits(email.body) if name == "phone" else norm(value) in text
+        found = digits(value) in digits(own_words) if name == "phone" else norm(value) in text
         if not found:
             values[name] = None
             notes.append(f"removed {name} '{value}': not found in the email")
             if name in IDENTITY_FIELDS:
                 flags.append(f"ungrounded:{name}")
-    if values["budget_amount"] is not None and not any(abs(v - values["budget_amount"]) < 0.01 for v, _, _ in amounts(email.body)):
+    if values["budget_amount"] is not None and not any(abs(v - values["budget_amount"]) < 0.01 for v, _, _ in amounts(own_words)):
         notes.append(f"removed budget {values['budget_amount']:g}: no such amount in the email")
         flags.append("ungrounded:budget_amount")
         values["budget_amount"] = values["budget_currency"] = None
